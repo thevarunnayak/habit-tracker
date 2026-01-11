@@ -1,23 +1,31 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import HabitCreateForm from "@/components/habits/habitCreateForm";
 
-export default function NewHabitPage() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Create Habit</h1>
-        <p className="text-sm text-muted-foreground">
-          Add a new habit and assign it to a habit set.
-        </p>
-      </div>
+export default async function NewHabitPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ setId?: string; lockSet?: string }>;
+}) {
+  const { setId, lockSet } = await searchParams;
 
-      <Card>
-        <CardHeader>
-          <CardTitle>New Habit Form</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-            This page will contain a form to create a new habit.
-        </CardContent>
-      </Card>
-    </div>
-  );
+  const session = await getServerSession(authOptions);
+
+  const user = session?.user?.email
+    ? await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { id: true },
+      })
+    : null;
+
+  const habitSets = user
+    ? await prisma.habitSet.findMany({
+        where: { userId: user.id },
+        orderBy: [{ isPinned: "desc" }, { createdAt: "desc" }],
+        select: { id: true, name: true },
+      })
+    : [];
+
+  return <HabitCreateForm habitSets={habitSets} defaultSetId={setId}  lockHabitSet={lockSet === "1"} />;
 }
