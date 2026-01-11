@@ -7,6 +7,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum HabitType {
+  CHECK
+  PROGRESS
+  TIMER
+  RATING
+  TEXT
+  MEASUREMENT
+}
+
 model User {
   id            String   @id @default(cuid())
   name          String?
@@ -17,10 +26,14 @@ model User {
   accounts      Account[]
   sessions      Session[]
 
+  // ✅ Habit relations
+  habitSets     HabitSet[]
+  habits        Habit[]
+  habitEntries  HabitEntry[]
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
-
 
 model Account {
   id                 String  @id @default(cuid())
@@ -63,7 +76,6 @@ model EmailOTP {
   email     String
   codeHash  String
   expiresAt DateTime
-  usedAt    DateTime?
   createdAt DateTime @default(now())
 
   @@index([email])
@@ -76,4 +88,97 @@ model SignupIntent {
   passwordHash String
   expiresAt    DateTime
   createdAt    DateTime @default(now())
+}
+
+// ✅ Habit Set
+model HabitSet {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  color     String?
+  isPinned  Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habits Habit[]
+
+  @@index([userId])
+}
+
+// ✅ Habit
+model Habit {
+  id         String   @id @default(cuid())
+  userId     String
+  habitSetId String
+
+  name       String
+  type       HabitType @default(CHECK)
+
+  // shared optional config fields
+  unit       String?
+  isActive   Boolean   @default(true)
+
+  // PROGRESS (target-based counter)
+  targetInt  Int?
+
+  // TIMER
+  targetSec  Int?
+
+  // RATING
+  ratingMax  Int? // ex: 5
+
+  // MEASUREMENT
+  precision  Int? // ex: 0 steps, 1 weight, 2 decimals
+  minFloat   Float?
+  maxFloat   Float?
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habitSet HabitSet @relation(fields: [habitSetId], references: [id], onDelete: Cascade)
+  entries  HabitEntry[]
+
+  @@index([userId])
+  @@index([habitSetId])
+}
+
+// ✅ Daily entry (1 per habit per day)
+model HabitEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  habitId   String
+
+  // normalized "start of day"
+  date      DateTime
+
+  // CHECK
+  checked   Boolean  @default(false)
+
+  // PROGRESS
+  valueInt  Int?
+
+  // TIMER
+  durationSec Int?
+
+  // RATING
+  rating    Int?
+
+  // TEXT
+  textValue String?
+
+  // MEASUREMENT
+  valueFloat Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([habitId])
+  @@unique([habitId, date])
 }
