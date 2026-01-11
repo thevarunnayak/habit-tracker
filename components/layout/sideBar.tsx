@@ -6,6 +6,12 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { navLinks } from "./navLinks";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function Sidebar({
   collapsed,
@@ -25,7 +31,6 @@ export default function Sidebar({
     >
       {/* Header */}
       <div className="h-14 flex items-center justify-end px-3 border-b">
-
         <Button
           size="icon"
           variant="ghost"
@@ -41,10 +46,11 @@ export default function Sidebar({
         {navLinks.map((item) => {
           const active = pathname === item.href;
 
-          return (
+          const linkEl = (
             <Link
               key={item.href}
               href={item.href}
+              aria-label={collapsed ? item.label : undefined}
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                 active
@@ -55,6 +61,18 @@ export default function Sidebar({
               <item.icon size={18} />
               {!collapsed && <span>{item.label}</span>}
             </Link>
+          );
+
+          // ✅ show tooltip only in collapsed mode
+          if (!collapsed) return linkEl;
+
+          return (
+            <TooltipProvider key={item.href} delayDuration={150}>
+              <Tooltip>
+                <TooltipTrigger asChild>{linkEl}</TooltipTrigger>
+                <TooltipContent side="right">{item.label}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           );
         })}
       </nav>

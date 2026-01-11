@@ -15,7 +15,7 @@ export default function NewHabitPage() {
           <CardTitle>New Habit Form</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
-          We will build this form in Step 3.2 (DB + create habit logic).
+            This page will contain a form to create a new habit.
         </CardContent>
       </Card>
     </div>

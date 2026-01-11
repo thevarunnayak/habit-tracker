@@ -33,9 +33,6 @@ export default function HabitsPage() {
           This page will show the full list of habit sets you created.
         </CardContent>
       </Card>
-
-      {/* Floating Add Button */}
-      <FloatingAddButton href="/habits/new" />
     </div>
   );
 }
