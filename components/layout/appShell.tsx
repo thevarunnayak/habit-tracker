@@ -15,16 +15,33 @@ export default function AppShell({
   const [collapsed, setCollapsed] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
-  // hydrate state from localStorage
+  // ✅ hydrate state from localStorage safely
   useEffect(() => {
-    const saved = localStorage.getItem("sidebarCollapsed");
-    if (saved) setCollapsed(saved === "true");
-    setHydrated(true);
+    try {
+      if (typeof window !== "undefined") {
+        const saved = window.localStorage.getItem("sidebarCollapsed");
+        if (saved !== null) {
+          setCollapsed(saved === "true");
+        }
+      }
+    } catch (error) {
+      console.warn("Failed to read sidebarCollapsed from localStorage", error);
+    } finally {
+      setHydrated(true);
+    }
   }, []);
 
+  // ✅ persist state safely
   useEffect(() => {
     if (!hydrated) return;
-    localStorage.setItem("sidebarCollapsed", String(collapsed));
+
+    try {
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("sidebarCollapsed", String(collapsed));
+      }
+    } catch (error) {
+      console.warn("Failed to write sidebarCollapsed to localStorage", error);
+    }
   }, [collapsed, hydrated]);
 
   // avoid hydration mismatch flash
@@ -34,11 +51,12 @@ export default function AppShell({
     <div className="flex">
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
 
-      <div className="flex-1 min-h-screen">
-        <Navbar title={title} />
+      <div className="flex-1 min-h-screen relative">
+        <Navbar />
         <main className="p-6">{children}</main>
+
+        <FloatingAddButton href="/habits/new" />
       </div>
-      <FloatingAddButton href="/habits/new" />
     </div>
   );
 }
