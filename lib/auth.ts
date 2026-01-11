@@ -4,6 +4,11 @@ import bcrypt from "bcrypt";
 
 import { prisma } from "@/lib/prisma";
 
+// dummy bcrypt hash to reduce timing side-channels
+// (any valid bcrypt hash works here)
+const DUMMY_BCRYPT_HASH =
+  "$2b$10$CwTycUXWue0Thq9StjUM0uJ8n2x3u7E2x9sHq4P0dK2W4e3qH5H6S";
+
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
   pages: {
@@ -18,63 +23,67 @@ export const authOptions: NextAuthOptions = {
         otp: { label: "OTP", type: "text" },
       },
 
+      async authorize(credentials) {
+        const email = credentials?.email as string | undefined;
+        const password = credentials?.password as string | undefined;
+        const otp = credentials?.otp as string | undefined;
 
-async authorize(credentials) {
-  const email = credentials?.email as string | undefined;
-  const password = credentials?.password as string | undefined;
-  const otp = credentials?.otp as string | undefined;
+        if (!email) return null;
 
-  if (!email) return null;
+        // ✅ check user first
+        const user = await prisma.user.findUnique({
+          where: { email },
+        });
 
-  const user = await prisma.user.findUnique({
-    where: { email },
-  });
+        // ✅ Password Login
+        if (password) {
+          if (!user?.password) return null;
 
-  // ✅ Password Login
-  if (password) {
-    if (!user?.password) return null;
+          const ok = await bcrypt.compare(password, user.password);
+          if (!ok) return null;
 
-    const ok = await bcrypt.compare(password, user.password);
-    if (!ok) return null;
+          return { id: user.id, email: user.email, name: user.name };
+        }
 
-    return { id: user.id, email: user.email, name: user.name };
-  }
+        // ✅ OTP Login
+        if (otp) {
+          // If user doesn't exist, do dummy compare to prevent timing differences
+          if (!user) {
+            await bcrypt.compare(otp, DUMMY_BCRYPT_HASH);
+            return null;
+          }
 
-  // ✅ OTP Login
-  if (otp) {
-    const otpRecord = await prisma.emailOTP.findFirst({
-      where: {
-        email,
-        usedAt: null,
-        expiresAt: { gt: new Date() },
+          // only fetch OTP record if user exists
+          const otpRecord = await prisma.emailOTP.findFirst({
+            where: {
+              email,
+              expiresAt: { gt: new Date() },
+            },
+            orderBy: { createdAt: "desc" },
+          });
+
+          if (!otpRecord) {
+            await bcrypt.compare(otp, DUMMY_BCRYPT_HASH);
+            return null;
+          }
+
+          const ok = await bcrypt.compare(otp, otpRecord.codeHash);
+          if (!ok) return null;
+
+          // ✅ consume OTP only after user exists + OTP matches
+          await prisma.emailOTP.delete({
+            where: { id: otpRecord.id },
+          });
+
+          return { id: user.id, email: user.email, name: user.name };
+        }
+
+        return null;
       },
-      orderBy: { createdAt: "desc" },
-    });
-
-    if (!otpRecord) return null;
-
-    const ok = await bcrypt.compare(otp, otpRecord.codeHash);
-    if (!ok) return null;
-
-    // mark OTP as used
-    await prisma.emailOTP.update({
-      where: { id: otpRecord.id },
-      data: { usedAt: new Date() },
-    });
-
-    if (!user) return null;
-
-    return { id: user.id, email: user.email, name: user.name };
-  }
-
-  return null;
-}
-
     }),
   ],
   callbacks: {
     async jwt({ token, user }) {
-      // user is only available on first login
       if (user) {
         token.id = user.id;
       }

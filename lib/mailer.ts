@@ -9,8 +9,6 @@ export const transporter = nodemailer.createTransport({
 });
 
 export async function sendOTPEmail(to: string, otp: string) {
-  console.log("SMTP_USER:", process.env.SMTP_USER);
-console.log("SMTP_PASS length:", process.env.SMTP_PASS?.length);
   const from = process.env.SMTP_FROM || process.env.SMTP_USER;
 
   await transporter.sendMail({

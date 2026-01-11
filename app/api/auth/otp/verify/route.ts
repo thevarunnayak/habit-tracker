@@ -2,25 +2,39 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcrypt";
 import { prisma } from "@/lib/prisma";
 
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 export async function POST(req: Request) {
   try {
-    const { email, otp } = (await req.json()) as {
-      email: string;
-      otp: string;
+    const { email: rawEmail, otp } = (await req.json()) as {
+      email?: string;
+      otp?: string;
     };
 
-    if (!email || !otp) {
+    const email = (rawEmail || "").trim().toLowerCase();
+    const code = (otp || "").trim();
+
+    if (!email || !code || !isValidEmail(email)) {
       return NextResponse.json(
-        { message: "Email + OTP required" },
+        { message: "Invalid OTP or expired OTP" },
         { status: 400 }
       );
     }
 
-    // get latest OTP for email
+    // ✅ cleanup expired OTPs for this email
+    await prisma.emailOTP.deleteMany({
+      where: {
+        email,
+        expiresAt: { lt: new Date() },
+      },
+    });
+
+    // ✅ get latest active OTP
     const record = await prisma.emailOTP.findFirst({
       where: {
         email,
-        usedAt: null,
         expiresAt: { gt: new Date() },
       },
       orderBy: { createdAt: "desc" },
@@ -28,23 +42,30 @@ export async function POST(req: Request) {
 
     if (!record) {
       return NextResponse.json(
-        { message: "OTP expired or invalid" },
+        { message: "Invalid OTP or expired OTP" },
         { status: 400 }
       );
     }
 
-    const ok = await bcrypt.compare(otp, record.codeHash);
+    const ok = await bcrypt.compare(code, record.codeHash);
     if (!ok) {
-      return NextResponse.json({ message: "Invalid OTP" }, { status: 400 });
+      return NextResponse.json(
+        { message: "Invalid OTP or expired OTP" },
+        { status: 400 }
+      );
     }
 
-    await prisma.emailOTP.update({
+    // ✅ delete OTP after successful verification
+    await prisma.emailOTP.delete({
       where: { id: record.id },
-      data: { usedAt: new Date() },
     });
 
     return NextResponse.json({ message: "OTP verified" }, { status: 200 });
   } catch {
-    return NextResponse.json({ message: "Something went wrong" }, { status: 500 });
+    // generic response
+    return NextResponse.json(
+      { message: "Invalid OTP or expired OTP" },
+      { status: 400 }
+    );
   }
 }
