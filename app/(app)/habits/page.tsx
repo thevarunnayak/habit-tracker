@@ -33,13 +33,14 @@ export default async function HabitsPage() {
       })
     : [];
 
-  const hexToRgba = (hex: any, alpha = 0.1) => {
+  const hexToRgba = (hex: string | null, alpha = 0.1) => {
+    if (!hex) return "transparent";
     hex = hex.replace("#", "");
 
     if (hex.length === 3) {
       hex = hex
         .split("")
-        .map((c: any) => c + c)
+        .map((c: string) => c + c)
         .join("");
     }
 
