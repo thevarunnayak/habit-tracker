@@ -27,7 +27,6 @@ export default async function HabitsPage() {
           habits: {
             where: { isActive: true },
             orderBy: { createdAt: "desc" },
-            take: 5, // ✅ show only preview list on main habits page
           },
         },
       })
@@ -130,7 +129,7 @@ export default async function HabitsPage() {
                     No habits in this set yet.
                   </p>
                 ) : (
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap gap-6">
                     {set.habits.map((h) => (
                       <div
                         key={h.id}
