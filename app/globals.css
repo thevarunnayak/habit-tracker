@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -79,6 +81,11 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.62 0.19 145); /* green (Completed) */
+  --chart-2: oklch(0.62 0.23 25);  /* red (Incomplete) */
+  --chart-3: oklch(0.74 0.18 80);  /* orange */
+  --chart-4: oklch(0.68 0.15 250); /* blue */
+  --chart-5: oklch(0.64 0.18 310); /* purple */
 }
 
 .dark {
@@ -113,6 +120,11 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.72 0.18 145);
+  --chart-2: oklch(0.72 0.22 25);
+  --chart-3: oklch(0.78 0.17 80);
+  --chart-4: oklch(0.78 0.13 250);
+  --chart-5: oklch(0.76 0.16 310);
 }
 
 @layer base {

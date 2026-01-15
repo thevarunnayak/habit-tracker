@@ -20,9 +20,7 @@ export default function AppShell({
     try {
       if (typeof window !== "undefined") {
         const saved = window.localStorage.getItem("sidebarCollapsed");
-        if (saved !== null) {
-          setCollapsed(saved === "true");
-        }
+        if (saved !== null) setCollapsed(saved === "true");
       }
     } catch (error) {
       console.warn("Failed to read sidebarCollapsed from localStorage", error);
@@ -34,7 +32,6 @@ export default function AppShell({
   // ✅ persist state safely
   useEffect(() => {
     if (!hydrated) return;
-
     try {
       if (typeof window !== "undefined") {
         window.localStorage.setItem("sidebarCollapsed", String(collapsed));
@@ -44,16 +41,19 @@ export default function AppShell({
     }
   }, [collapsed, hydrated]);
 
-  // avoid hydration mismatch flash
   if (!hydrated) return null;
 
   return (
-    <div className="flex">
+    // ✅ stop the entire page from horizontal overflow
+    <div className="flex w-full min-w-0 overflow-x-hidden">
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
 
-      <div className="flex-1 min-h-screen relative">
+      {/* ✅ min-w-0 is REQUIRED inside flex layouts */}
+      <div className="flex-1 min-w-0 min-h-screen relative">
         <Navbar />
-        <main className="p-6">{children}</main>
+
+        {/* ✅ main should also allow shrinking */}
+        <main className="p-6 min-w-0">{children}</main>
 
         <FloatingAddButton href="/habits/new" />
       </div>

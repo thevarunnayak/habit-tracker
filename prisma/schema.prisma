@@ -16,6 +16,17 @@ enum HabitType {
   MEASUREMENT
 }
 
+enum HabitEntryStatus {
+  COMPLETED
+  SKIPPED
+}
+
+enum StreakStage {
+  BEGINNER
+  SEMI_PRO
+  LEGEND
+}
+
 model User {
   id            String   @id @default(cuid())
   name          String?
@@ -31,8 +42,13 @@ model User {
   habits        Habit[]
   habitEntries  HabitEntry[]
 
+  // ✅ Settings
+  defaultStreakStage StreakStage @default(SEMI_PRO)
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@index([email])
 }
 
 model Account {
@@ -52,6 +68,7 @@ model Account {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 model Session {
@@ -61,6 +78,8 @@ model Session {
   expires      DateTime
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model VerificationToken {
@@ -76,9 +95,11 @@ model EmailOTP {
   email     String
   codeHash  String
   expiresAt DateTime
+  usedAt    DateTime?
   createdAt DateTime @default(now())
 
   @@index([email])
+  @@index([expiresAt])
 }
 
 model SignupIntent {
@@ -98,6 +119,23 @@ model HabitSet {
   color     String?
   isPinned  Boolean  @default(false)
 
+  // ✅ schedule / occurrence
+  isArchived Boolean @default(false)
+
+  /// Bitmask Mon-Sun:
+  /// Mon=1 Tue=2 Wed=4 Thu=8 Fri=16 Sat=32 Sun=64
+  /// 127 => everyday
+  activeDays Int     @default(127)
+
+  // ✅ cached streak analytics
+  currentStreak  Int      @default(0)
+  bestStreak     Int      @default(0)
+  lastStreakDate DateTime?
+  streakBrokenAt DateTime?
+
+  // ✅ streak rules for this habit set
+  streakStage StreakStage @default(SEMI_PRO)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -105,9 +143,11 @@ model HabitSet {
   habits Habit[]
 
   @@index([userId])
+  @@index([userId, isPinned])
+  @@index([userId, isArchived])
+  @@index([userId, streakStage])
 }
 
-// ✅ Habit
 model Habit {
   id         String   @id @default(cuid())
   userId     String
@@ -120,48 +160,53 @@ model Habit {
   unit       String?
   isActive   Boolean   @default(true)
 
-  // PROGRESS (target-based counter)
+  // PROGRESS
   targetInt  Int?
 
   // TIMER
   targetSec  Int?
 
   // RATING
-  ratingMax  Int? // ex: 5
+  ratingMax  Int?
 
   // MEASUREMENT
-  precision  Int? // ex: 0 steps, 1 weight, 2 decimals
+  precision  Int?
   minFloat   Float?
   maxFloat   Float?
 
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   habitSet HabitSet @relation(fields: [habitSetId], references: [id], onDelete: Cascade)
+
   entries  HabitEntry[]
 
   @@index([userId])
   @@index([habitSetId])
+  @@index([userId, habitSetId])
+  @@index([userId, isActive])
 }
 
-// ✅ Daily entry (1 per habit per day)
 model HabitEntry {
-  id        String   @id @default(cuid())
+  id        String           @id @default(cuid())
   userId    String
   habitId   String
 
-  // normalized "start of day"
+  // normalized start of day (IST normalized by your helper)
   date      DateTime
 
+  status    HabitEntryStatus @default(COMPLETED)
+
   // CHECK
-  checked   Boolean  @default(false)
+  checked   Boolean?
 
   // PROGRESS
   valueInt  Int?
 
   // TIMER
-  durationSec Int?
+  durationSec   Int?
+  runningSince  DateTime?
 
   // RATING
   rating    Int?
@@ -178,7 +223,8 @@ model HabitEntry {
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
-  @@index([habitId])
   @@unique([habitId, date])
+  @@index([userId, date])
+  @@index([habitId])
+  @@index([habitId, date, status])
 }
