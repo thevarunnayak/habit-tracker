@@ -29,7 +29,7 @@ export default function Navbar() {
       .join("") || "U";
 
   return (
-    <header className="h-14 border-b px-4 flex items-center justify-between bg-background">
+    <header className="sticky top-0 z-40 h-14 border-b px-4 flex items-center justify-between bg-background">
       {/* ✅ Logo */}
       <Link href="/dashboard" className="flex items-center">
         {/* Mobile icon */}

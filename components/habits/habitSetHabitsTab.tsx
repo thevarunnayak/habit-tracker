@@ -5,19 +5,22 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import HabitSetHabitsList from "./habitSetHabitList";
 import HabitSetHabitsGridTable from "./habitSetGridTable";
+import HabitSetAnalyticsTab from "./analytics/habitSetAnalyticsTab";
 
 export default function HabitSetHabitsTabs({
   habits,
   dates,
   rangeDays,
   habitSetCreatedAt, // ✅ NEW
-  hasAtLeast7Days
+  hasAtLeast7Days,
+  analytics
 }: {
   habits: any[];
   dates: string[];
   rangeDays: number;
   habitSetCreatedAt: string; // ✅ NEW
-  hasAtLeast7Days: boolean
+  hasAtLeast7Days: boolean,
+  analytics: any
 }) {
   const [tab, setTab] = useState<"list" | "table">("list");
 
@@ -32,6 +35,7 @@ export default function HabitSetHabitsTabs({
         <TabsList className="max-w-full overflow-x-auto">
           <TabsTrigger value="list">List</TabsTrigger>
           <TabsTrigger value="table">Table</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
       </div>
 
@@ -49,6 +53,9 @@ export default function HabitSetHabitsTabs({
           habitSetCreatedAt={habitSetCreatedAt} // ✅ correct
           hasAtLeast7Days={hasAtLeast7Days}
         />
+      </TabsContent>
+      <TabsContent value="analytics" className="mt-4 min-w-0 overflow-hidden">
+        <HabitSetAnalyticsTab analytics={analytics} />
       </TabsContent>
     </Tabs>
   );
