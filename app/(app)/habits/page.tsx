@@ -3,11 +3,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+import { getISTDayStart } from "@/lib/dates";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import CreateHabitSetDialog from "@/components/habits/createHabitSetDialog";
 import PinHabitSetButton from "@/components/habits/pinHabitSetButton";
 import { Button } from "@/components/ui/button";
-import HabitTypeBadge from "@/components/habits/habitTypeBadge";
+import HabitCard from "@/components/habits/habitCard";
 
 export default async function HabitsPage() {
   const session = await getServerSession(authOptions);
@@ -19,6 +21,8 @@ export default async function HabitsPage() {
       })
     : null;
 
+  const today = getISTDayStart(new Date());
+
   const habitSets = user
     ? await prisma.habitSet.findMany({
         where: { userId: user.id },
@@ -27,6 +31,13 @@ export default async function HabitsPage() {
           habits: {
             where: { isActive: true },
             orderBy: { createdAt: "desc" },
+            include: {
+              entries: {
+                where: { date: today },
+                take: 1,
+                orderBy: { createdAt: "desc" },
+              },
+            },
           },
         },
       })
@@ -50,6 +61,15 @@ export default async function HabitsPage() {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   };
 
+  // ✅ normalize habits => habit.entry (same as dashboard)
+  const normalizedSets = habitSets.map((set) => ({
+    ...set,
+    habits: set.habits.map((h) => ({
+      ...h,
+      entry: h.entries[0] ?? null,
+    })),
+  }));
+
   return (
     <div className="space-y-6">
       {/* header */}
@@ -71,14 +91,14 @@ export default async function HabitsPage() {
 
       {/* sets */}
       <div className="space-y-4">
-        {habitSets.length === 0 ? (
+        {normalizedSets.length === 0 ? (
           <Card>
             <CardContent className="py-6 text-sm text-muted-foreground">
               No habit sets yet. Create one to get started.
             </CardContent>
           </Card>
         ) : (
-          habitSets.map((set) => (
+          normalizedSets.map((set) => (
             <Card
               key={set.id}
               style={{ backgroundColor: hexToRgba(set.color, 0.1) }}
@@ -103,8 +123,13 @@ export default async function HabitsPage() {
                         {set.name}
                       </Link>
                     </CardTitle>
-                    <p className="text-xs text-muted-foreground">
-                      {set.isPinned ? "Pinned" : "Not pinned"}
+
+                    <p className="text-xs text-muted-foreground flex flex-wrap gap-x-2 gap-y-1">
+                      <span>🔥 {set.currentStreak ?? 0} day streak</span>
+                      <span className="opacity-70">•</span>
+                      <span>🏆 Best: {set.bestStreak ?? 0}</span>
+                      <span className="opacity-70">•</span>
+                      <span>{set.isPinned ? "Pinned" : "Not pinned"}</span>
                     </p>
                   </div>
                 </div>
@@ -129,26 +154,9 @@ export default async function HabitsPage() {
                     No habits in this set yet.
                   </p>
                 ) : (
-                  <div className="flex flex-wrap gap-6">
+                  <div className="flex flex-wrap gap-3">
                     {set.habits.map((h) => (
-                      <div
-                        key={h.id}
-                        className="w-full sm:w-72 md:w-76 flex items-start justify-between gap-3 rounded-lg border p-3"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium leading-tight truncate">
-                            {h.name}
-                            {h.unit ? (
-                              <span className="text-xs text-muted-foreground font-normal">
-                                {" "}
-                                ({h.unit})
-                              </span>
-                            ) : null}
-                          </p>
-                        </div>
-
-                        <HabitTypeBadge type={h.type} />
-                      </div>
+                      <HabitCard key={h.id} habit={h as any} />
                     ))}
                   </div>
                 )}
