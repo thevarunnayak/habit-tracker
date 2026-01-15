@@ -86,6 +86,9 @@
   --chart-3: oklch(0.74 0.18 80);  /* orange */
   --chart-4: oklch(0.68 0.15 250); /* blue */
   --chart-5: oklch(0.64 0.18 310); /* purple */
+    --color-completed: oklch(0.72 0.16 145);   /* green */
+  --color-incomplete: oklch(0.68 0.18 25);   /* red/orange */
+  --color-skipped: oklch(0.72 0.03 260);     /* neutral/gray violet */
 }
 
 .dark {
@@ -125,6 +128,9 @@
   --chart-3: oklch(0.78 0.17 80);
   --chart-4: oklch(0.78 0.13 250);
   --chart-5: oklch(0.76 0.16 310);
+    --color-completed: oklch(0.75 0.16 145);
+  --color-incomplete: oklch(0.74 0.18 25);
+  --color-skipped: oklch(0.78 0.03 260);
 }
 
 @layer base {

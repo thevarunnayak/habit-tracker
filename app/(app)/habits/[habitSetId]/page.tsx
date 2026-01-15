@@ -7,6 +7,7 @@ import { getISTDayStart } from "@/lib/dates";
 
 import HabitSetDetailHeader from "@/components/habits/habitSetDetailHeader";
 import HabitSetHabitsTabs from "@/components/habits/habitSetHabitsTab";
+import { getHabitSetAnalytics } from "@/lib/stats/habitSetAnalytics";
 
 /**
  * ✅ Returns calendar dates from:
@@ -120,6 +121,11 @@ export default async function HabitSetDetailPage({
 
   if (!habitSet) return notFound();
 
+  const analytics = await getHabitSetAnalytics({
+    userId: user.id,
+    habitSetId,
+  });
+
   return (
     <div className="space-y-6">
       <HabitSetDetailHeader
@@ -133,6 +139,7 @@ export default async function HabitSetDetailPage({
         rangeDays={rangeDays}
         habitSetCreatedAt={habitSetMeta.createdAt.toISOString()}
         hasAtLeast7Days={hasAtLeast7Days} // ✅ NEW
+        analytics={analytics}
       />
     </div>
   );

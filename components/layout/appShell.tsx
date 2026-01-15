@@ -15,45 +15,43 @@ export default function AppShell({
   const [collapsed, setCollapsed] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
-  // ✅ hydrate state from localStorage safely
   useEffect(() => {
     try {
-      if (typeof window !== "undefined") {
-        const saved = window.localStorage.getItem("sidebarCollapsed");
-        if (saved !== null) setCollapsed(saved === "true");
-      }
-    } catch (error) {
-      console.warn("Failed to read sidebarCollapsed from localStorage", error);
+      const saved = window.localStorage.getItem("sidebarCollapsed");
+      if (saved !== null) setCollapsed(saved === "true");
+    } catch (e) {
+      console.warn("Failed to read sidebarCollapsed", e);
     } finally {
       setHydrated(true);
     }
   }, []);
 
-  // ✅ persist state safely
   useEffect(() => {
     if (!hydrated) return;
     try {
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem("sidebarCollapsed", String(collapsed));
-      }
-    } catch (error) {
-      console.warn("Failed to write sidebarCollapsed to localStorage", error);
+      window.localStorage.setItem("sidebarCollapsed", String(collapsed));
+    } catch (e) {
+      console.warn("Failed to write sidebarCollapsed", e);
     }
   }, [collapsed, hydrated]);
 
   if (!hydrated) return null;
 
   return (
-    // ✅ stop the entire page from horizontal overflow
-    <div className="flex w-full min-w-0 overflow-x-hidden">
+    // ✅ layout itself should not scroll
+    <div className="flex h-screen w-full min-w-0 overflow-hidden">
+      {/* Sidebar sticky */}
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
 
-      {/* ✅ min-w-0 is REQUIRED inside flex layouts */}
-      <div className="flex-1 min-w-0 min-h-screen relative">
+      {/* Right side */}
+      <div className="flex flex-1 min-w-0 flex-col">
+        {/* Navbar sticky */}
         <Navbar />
 
-        {/* ✅ main should also allow shrinking */}
-        <main className="p-6 min-w-0">{children}</main>
+        {/* ✅ only this area scrolls */}
+        <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-6">
+          {children}
+        </main>
 
         <FloatingAddButton href="/habits/new" />
       </div>
