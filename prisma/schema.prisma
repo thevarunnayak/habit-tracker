@@ -42,6 +42,9 @@ model User {
   habits        Habit[]
   habitEntries  HabitEntry[]
 
+  // ✅ Journal relations
+  journals      Journal[]
+
   // ✅ Settings
   defaultStreakStage StreakStage @default(SEMI_PRO)
 
@@ -228,3 +231,29 @@ model HabitEntry {
   @@index([habitId])
   @@index([habitId, date, status])
 }
+
+// 📝 JOURNAL (NEW)
+// 📝 JOURNAL
+model Journal {
+  id        String   @id @default(cuid())
+  userId    String
+
+  // Title derived from first line of content
+  title     String
+
+  // Day bucket (IST normalized, optional but useful)
+  date      DateTime
+
+  // Rich text content (Tiptap JSON)
+  content   Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, date])
+  @@index([userId, createdAt])
+}
+
