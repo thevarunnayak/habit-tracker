@@ -19,6 +19,7 @@ import {
   Ruler,
   CheckCheck,
 } from "lucide-react";
+import { useGlobalLoader } from "../providers/globalLoaderProvider";
 
 type Entry = {
   checked: boolean | null;
@@ -67,6 +68,7 @@ function HabitTypeIcon({ type }: { type: string }) {
 }
 
 export default function HabitCard({ habit }: HabitCardProps) {
+  const { showLoader } = useGlobalLoader();
   const [pending, startTransition] = useTransition();
 
   const status = useMemo(() => {
@@ -113,7 +115,7 @@ export default function HabitCard({ habit }: HabitCardProps) {
     startTransition(async () => {
       if (habit.type === "CHECK") {
         const next = !(habit.entry?.checked ?? false);
-
+        showLoader()
         const res = await upsertHabitEntry({
           habitId: habit.id,
           type: "CHECK",

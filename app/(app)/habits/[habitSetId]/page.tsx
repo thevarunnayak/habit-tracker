@@ -18,15 +18,15 @@ function getPastDatesFromCreatedAt(rangeDays: number, createdAt: Date) {
   const today = getISTDayStart(new Date());
   const createdDay = getISTDayStart(new Date(createdAt));
 
-  // ✅ if ALL => start from createdDay
   let start = createdDay;
 
   if (rangeDays !== -1) {
     const rangeStart = getISTDayStart(new Date(today));
     rangeStart.setDate(rangeStart.getDate() - (rangeDays - 1));
-
-    // ✅ clamp
-    start = rangeStart.getTime() < createdDay.getTime() ? createdDay : rangeStart;
+    start =
+      rangeStart.getTime() < createdDay.getTime()
+        ? createdDay
+        : rangeStart;
   }
 
   const arr: Date[] = [];
@@ -41,16 +41,20 @@ function getPastDatesFromCreatedAt(rangeDays: number, createdAt: Date) {
 }
 
 function parseRange(v: unknown) {
-  if (v === "all") return -1; // ✅ special flag for ALL
-
+  if (v === "all") return -1;
   const n = Number(v);
-  if (n === 7) return 7;
-  if (n === 14) return 14;
-  if (n === 30) return 30;
-  if (n === 90) return 90;
-  if (n === 365) return 365;
-
+  if ([7, 14, 30, 90, 365].includes(n)) return n;
   return 14;
+}
+
+/** ✅ NEW */
+function mapRangeDaysToAnalyticsRange(
+  rangeDays: number
+): "WEEK" | "MONTH" | "YEAR" | "ALL" {
+  if (rangeDays === -1) return "ALL";
+  if (rangeDays <= 7) return "WEEK";
+  if (rangeDays <= 30) return "MONTH";
+  return "YEAR";
 }
 
 export default async function HabitSetDetailPage({
@@ -71,36 +75,31 @@ export default async function HabitSetDetailPage({
     where: { email: session.user.email },
     select: { id: true },
   });
-
   if (!user) return notFound();
 
-  // ✅ First: get habitSet createdAt
+  // ✅ HabitSet metadata
   const habitSetMeta = await prisma.habitSet.findFirst({
     where: { id: habitSetId, userId: user.id },
-    select: {
-      id: true,
-      createdAt: true,
-    },
+    select: { id: true, createdAt: true },
   });
-
   if (!habitSetMeta) return notFound();
 
   // ✅ minimum 7 days rule
   const today = getISTDayStart(new Date());
   const createdDay = getISTDayStart(new Date(habitSetMeta.createdAt));
-
   const totalAvailableDays =
-    Math.floor((today.getTime() - createdDay.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    Math.floor(
+      (today.getTime() - createdDay.getTime()) / (1000 * 60 * 60 * 24)
+    ) + 1;
 
   const hasAtLeast7Days = totalAvailableDays >= 7;
 
-  // ✅ date range clamped by createdAt
+  // ✅ date range for table
   const dates = getPastDatesFromCreatedAt(rangeDays, habitSetMeta.createdAt);
-
   const from = dates[0]!;
   const to = dates[dates.length - 1]!;
 
-  // ✅ Now fetch full set + habits + entries only for selected range
+  // ✅ fetch habits + entries
   const habitSet = await prisma.habitSet.findFirst({
     where: { id: habitSetId, userId: user.id },
     include: {
@@ -109,21 +108,22 @@ export default async function HabitSetDetailPage({
         orderBy: { createdAt: "desc" },
         include: {
           entries: {
-            where: {
-              date: { gte: from, lte: to },
-            },
+            where: { date: { gte: from, lte: to } },
             orderBy: { date: "asc" },
           },
         },
       },
     },
   });
-
   if (!habitSet) return notFound();
+
+  // ✅ FIX: analytics now uses SAME range
+  const analyticsRange = mapRangeDaysToAnalyticsRange(rangeDays);
 
   const analytics = await getHabitSetAnalytics({
     userId: user.id,
     habitSetId,
+    range: analyticsRange,
   });
 
   return (
@@ -138,7 +138,7 @@ export default async function HabitSetDetailPage({
         dates={dates.map((d) => d.toISOString())}
         rangeDays={rangeDays}
         habitSetCreatedAt={habitSetMeta.createdAt.toISOString()}
-        hasAtLeast7Days={hasAtLeast7Days} // ✅ NEW
+        hasAtLeast7Days={hasAtLeast7Days}
         analytics={analytics}
       />
     </div>
